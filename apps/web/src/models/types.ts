@@ -38,4 +38,5 @@ export type StoryBlockData = {
   type: BlockType
   title: string
   summary?: string
+  content?: string
 }

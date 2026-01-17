@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { generateMock } from '../ai/mockAdapter'
 import { Canvas } from '../canvas/Canvas'
 import { BlockPalette } from '../components/BlockPalette'
 import { Inspector } from '../components/Inspector'
@@ -29,14 +30,17 @@ export const App = () => {
   const campaignId = useCanvasStore((state) => state.campaignId)
   const campaignTitle = useCanvasStore((state) => state.campaignTitle)
   const hasHydrated = useCanvasStore((state) => state.hasHydrated)
+  const dirtyNodeIds = useCanvasStore((state) => state.dirtyNodeIds)
   const setCampaignMeta = useCanvasStore((state) => state.setCampaignMeta)
   const setCampaignTitle = useCanvasStore((state) => state.setCampaignTitle)
   const setCampaignData = useCanvasStore((state) => state.setCampaignData)
   const setHasHydrated = useCanvasStore((state) => state.setHasHydrated)
+  const applyGeneratedContent = useCanvasStore((state) => state.applyGeneratedContent)
 
   const [status, setStatus] = useState<'idle' | 'loading' | 'saving' | 'error'>('loading')
   const [error, setError] = useState<string | null>(null)
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
+  const [isGenerating, setIsGenerating] = useState(false)
 
   const savingRef = useRef(false)
   const skipAutoSave = useRef(true)
@@ -194,6 +198,24 @@ export const App = () => {
     await saveCampaign()
   }
 
+  const handleRegenerate = () => {
+    if (dirtyNodeIds.length === 0 || isGenerating) {
+      return
+    }
+
+    setIsGenerating(true)
+    try {
+      const updates = generateMock(dirtyNodeIds, nodes, edges)
+      applyGeneratedContent(updates)
+    } catch (generationError) {
+      const message =
+        generationError instanceof Error ? generationError.message : 'Failed to regenerate.'
+      setError(message)
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
   const statusLabel =
     status === 'loading'
       ? 'Loading...'
@@ -210,13 +232,19 @@ export const App = () => {
       ? 'status-pill status-pill--saving'
       : 'status-pill status-pill--ok'
 
+  const regenLabel = isGenerating
+    ? 'Regenerating...'
+    : dirtyNodeIds.length > 0
+    ? `Regenerate (${dirtyNodeIds.length})`
+    : 'Regenerate'
+
   return (
     <div className="app-shell">
       <header className="app-header">
         <div className="app-header__left">
           <div>
             <div className="app-title">AI Campaign Builder</div>
-            <div className="app-subtitle">Phase 2 - Story Model & Persistence</div>
+            <div className="app-subtitle">Phase 3 - AI Mock Integration</div>
           </div>
           <div className="campaign-field">
             <label className="campaign-field__label" htmlFor="campaign-title">
@@ -242,6 +270,14 @@ export const App = () => {
           </button>
           <button type="button" className="primary-button" onClick={handleSave}>
             Save
+          </button>
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={handleRegenerate}
+            disabled={dirtyNodeIds.length === 0 || isGenerating}
+          >
+            {regenLabel}
           </button>
         </div>
       </header>

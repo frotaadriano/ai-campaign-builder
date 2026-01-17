@@ -1,4 +1,4 @@
-# Phase 3 ? AI Mock Integration
+# Phase 3 - AI Mock Integration
 
 Goal:
 Simulate AI generation with deterministic mock outputs.

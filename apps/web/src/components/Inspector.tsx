@@ -56,6 +56,19 @@ export const Inspector = () => {
           ))}
         </select>
       </div>
+      <div className="field">
+        <label className="field__label" htmlFor="block-content">
+          Generated text
+        </label>
+        <textarea
+          id="block-content"
+          className="field__textarea"
+          rows={6}
+          value={selectedNode.data.content ?? ''}
+          readOnly
+          placeholder="Run regeneration to populate this block."
+        />
+      </div>
       <button type="button" className="danger-button" onClick={handleDelete}>
         Delete block
       </button>
