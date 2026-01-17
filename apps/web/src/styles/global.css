@@ -43,11 +43,27 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
   padding: 12px 16px;
   border-radius: 16px;
   background: var(--panel);
   box-shadow: 0 12px 24px var(--panel-shadow);
   border: 1px solid var(--panel-border);
+}
+
+.app-header__left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.app-header__right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .app-title {
@@ -69,6 +85,89 @@ body {
   padding: 6px 12px;
   border-radius: 999px;
   font-weight: 500;
+}
+
+.campaign-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 220px;
+}
+
+.campaign-field__label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.campaign-field__input {
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #f9fafb;
+}
+
+.status-pill {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  background: #eef2f1;
+  color: var(--muted);
+}
+
+.status-pill--ok {
+  background: #e9f6f2;
+  color: #1f5f55;
+  border-color: #c7e6df;
+}
+
+.status-pill--saving {
+  background: #f2f4ff;
+  color: #3242a8;
+  border-color: #d7dbff;
+}
+
+.status-pill--error {
+  background: #ffecec;
+  color: #a03333;
+  border-color: #f4c4c4;
+}
+
+.ghost-button,
+.primary-button {
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid var(--panel-border);
+  background: #ffffff;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.ghost-button:hover,
+.primary-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(20, 28, 39, 0.12);
+}
+
+.primary-button {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+
+.app-alert {
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #ffecec;
+  border: 1px solid #f4c4c4;
+  color: #a03333;
+  font-size: 13px;
 }
 
 .app-body {

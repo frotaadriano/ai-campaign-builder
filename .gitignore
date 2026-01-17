@@ -205,3 +205,13 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Node
+node_modules/
+apps/web/node_modules/
+apps/web/dist/
+apps/web/.vite/
+
+# Local DB
+apps/api/data/*.db
+apps/api/data/*.db-journal

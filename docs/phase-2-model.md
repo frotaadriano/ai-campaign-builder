@@ -1,4 +1,4 @@
-# Phase 2 ? Story Model and Persistence
+# Phase 2 - Story Model and Persistence
 
 Goal:
 Define the story data model and save/load campaigns locally.

@@ -37,11 +37,18 @@ const getNextPosition = (index: number) => {
 type CanvasState = {
   nodes: Node<StoryBlockData>[]
   edges: Edge[]
+  campaignId: string | null
+  campaignTitle: string
+  hasHydrated: boolean
   selectedNodeId: string | null
   addBlock: (type: BlockType) => void
   updateBlock: (id: string, patch: Partial<StoryBlockData>) => void
   removeNodes: (nodeIds: string[]) => void
   setSelectedNodeId: (nodeId: string | null) => void
+  setCampaignMeta: (id: string, title: string) => void
+  setCampaignTitle: (title: string) => void
+  setCampaignData: (nodes: Node<StoryBlockData>[], edges: Edge[]) => void
+  setHasHydrated: (value: boolean) => void
   onNodesChange: (changes: NodeChange[]) => void
   onEdgesChange: (changes: EdgeChange[]) => void
   onConnect: (connection: Connection) => void
@@ -51,6 +58,9 @@ export const useCanvasStore = create<CanvasState>()(
   immer((set) => ({
     nodes: [],
     edges: [],
+    campaignId: null,
+    campaignTitle: 'Untitled Campaign',
+    hasHydrated: false,
     selectedNodeId: null,
     addBlock: (type) => {
       set((state) => {
@@ -67,6 +77,7 @@ export const useCanvasStore = create<CanvasState>()(
             title: getDefaultTitle(type),
           },
         })
+        state.selectedNodeId = id
       })
     },
     updateBlock: (id, patch) => {
@@ -97,6 +108,29 @@ export const useCanvasStore = create<CanvasState>()(
     setSelectedNodeId: (nodeId) => {
       set((state) => {
         state.selectedNodeId = nodeId
+      })
+    },
+    setCampaignMeta: (id, title) => {
+      set((state) => {
+        state.campaignId = id
+        state.campaignTitle = title
+      })
+    },
+    setCampaignTitle: (title) => {
+      set((state) => {
+        state.campaignTitle = title
+      })
+    },
+    setCampaignData: (nodes, edges) => {
+      set((state) => {
+        state.nodes = nodes
+        state.edges = edges
+        state.selectedNodeId = null
+      })
+    },
+    setHasHydrated: (value) => {
+      set((state) => {
+        state.hasHydrated = value
       })
     },
     onNodesChange: (changes) => {
