@@ -84,6 +84,39 @@ const buildSnapshot = (
   }
 }
 
+const buildIncomingMap = (edges: Edge[]) => {
+  const incoming = new Map<string, string[]>()
+  edges.forEach((edge) => {
+    const current = incoming.get(edge.target) ?? []
+    incoming.set(edge.target, [...current, edge.source])
+  })
+  return incoming
+}
+
+const collectUpstreamIds = (targetIds: string[], edges: Edge[]) => {
+  const incoming = buildIncomingMap(edges)
+  const visited = new Set<string>()
+  const queue = [...targetIds]
+
+  while (queue.length > 0) {
+    const current = queue.shift()
+    if (!current) {
+      continue
+    }
+
+    const parents = incoming.get(current) ?? []
+    parents.forEach((parent) => {
+      if (visited.has(parent) || targetIds.includes(parent)) {
+        return
+      }
+      visited.add(parent)
+      queue.push(parent)
+    })
+  }
+
+  return Array.from(visited)
+}
+
 export const App = () => {
   const nodes = useCanvasStore((state) => state.nodes)
   const edges = useCanvasStore((state) => state.edges)
@@ -107,6 +140,8 @@ export const App = () => {
   const [campaigns, setCampaigns] = useState<CampaignSummary[]>([])
   const [campaignsStatus, setCampaignsStatus] = useState<'idle' | 'loading' | 'error'>('idle')
   const [campaignsError, setCampaignsError] = useState<string | null>(null)
+  const [impactIds, setImpactIds] = useState<string[] | null>(null)
+  const [impactTargetIds, setImpactTargetIds] = useState<string[] | null>(null)
 
   const savingRef = useRef(false)
   const skipAutoSave = useRef(true)
@@ -340,8 +375,7 @@ export const App = () => {
     }
   }
 
-  const handleRegenerate = () => {
-    const targetIds = selectedNodeIds.length > 0 ? selectedNodeIds : dirtyNodeIds
+  const runRegeneration = (targetIds: string[]) => {
     if (targetIds.length === 0 || isGenerating) {
       return
     }
@@ -371,6 +405,24 @@ export const App = () => {
     }
 
     void run()
+  }
+
+  const handleRegenerate = () => {
+    const targetIds = selectedNodeIds.length > 0 ? selectedNodeIds : dirtyNodeIds
+    if (targetIds.length === 0 || isGenerating) {
+      return
+    }
+
+    if (selectedNodeIds.length > 0) {
+      const upstreamIds = collectUpstreamIds(targetIds, edges)
+      if (upstreamIds.length > 0) {
+        setImpactIds(upstreamIds)
+        setImpactTargetIds(targetIds)
+        return
+      }
+    }
+
+    runRegeneration(targetIds)
   }
 
   const statusLabel =
@@ -418,6 +470,16 @@ export const App = () => {
       })
       .join('\n\n')
   }, [nodes])
+
+  const impactNodes = useMemo(() => {
+    if (!impactIds) {
+      return []
+    }
+    const map = new Map(nodes.map((node) => [node.id, node]))
+    return impactIds
+      .map((id) => map.get(id))
+      .filter((node): node is Node<StoryBlockData> => Boolean(node))
+  }, [impactIds, nodes])
 
   return (
     <div className="app-shell">
@@ -549,6 +611,73 @@ export const App = () => {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {impactIds && impactTargetIds ? (
+        <div className="story-modal">
+          <div
+            className="story-modal__overlay"
+            onClick={() => {
+              setImpactIds(null)
+              setImpactTargetIds(null)
+            }}
+          />
+          <div className="story-modal__content">
+            <div className="story-modal__header">
+              <div className="story-modal__title">Possivel impacto em outros blocos</div>
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={() => {
+                  setImpactIds(null)
+                  setImpactTargetIds(null)
+                }}
+              >
+                Fechar
+              </button>
+            </div>
+            <div className="story-modal__body">
+              <div className="panel__empty">
+                Estes blocos estao conectados ao que voce selecionou. A IA pode sugerir
+                alteracoes neles para manter coerencia.
+              </div>
+              <div className="campaigns-list">
+                {impactNodes.map((node) => (
+                  <div key={node.id} className="campaigns-card">
+                    <div className="campaigns-card__title">
+                      {typeLabelMap.get(node.data.type) ?? node.data.type}: {node.data.title}
+                    </div>
+                    <div className="campaigns-card__meta">ID: {node.id}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="impact-actions">
+                <button
+                  type="button"
+                  className="ghost-button"
+                  onClick={() => {
+                    setImpactIds(null)
+                    setImpactTargetIds(null)
+                    runRegeneration(impactTargetIds)
+                  }}
+                >
+                  Regenerar apenas selecionados
+                </button>
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={() => {
+                    const combined = Array.from(new Set([...impactTargetIds, ...impactIds]))
+                    setImpactIds(null)
+                    setImpactTargetIds(null)
+                    runRegeneration(combined)
+                  }}
+                >
+                  Incluir relacionados
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -8,6 +10,7 @@ from app.db.session import Base, engine, ensure_data_dir
 
 
 def create_app() -> FastAPI:
+    logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(name)s: %(message)s')
     load_dotenv()
     ensure_data_dir()
     Base.metadata.create_all(bind=engine)

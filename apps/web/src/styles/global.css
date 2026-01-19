@@ -276,6 +276,13 @@ body {
   color: var(--muted);
 }
 
+.impact-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
 .app-body {
   flex: 1;
   display: grid;
@@ -395,6 +402,22 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.story-node__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.story-node__id {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  background: #f3f5f7;
+  padding: 2px 6px;
+  border-radius: 999px;
 }
 
 .story-node__type {
