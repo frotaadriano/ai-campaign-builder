@@ -1,0 +1,180 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import List, Mapping, Optional
+
+TYPE_ORDER = ['theme', 'location', 'npc', 'event', 'twist']
+
+TYPE_LABELS = {
+    'theme': 'Theme',
+    'location': 'Location',
+    'npc': 'NPC',
+    'event': 'Event',
+    'twist': 'Twist',
+}
+
+
+@dataclass(frozen=True)
+class NodeRecord:
+    id: str
+    type: str
+    title: str
+    content: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class EdgeRecord:
+    source: str
+    target: str
+
+
+@dataclass(frozen=True)
+class PromptConfig:
+    max_depth: int = 2
+    max_context_items: int = 8
+    max_prompt_chars: int = 2000
+
+
+@dataclass(frozen=True)
+class PromptItem:
+    id: str
+    prompt: str
+    target_title: str
+    context_titles: List[str]
+
+
+def parse_nodes(raw_nodes: List[dict]) -> List[NodeRecord]:
+    nodes: List[NodeRecord] = []
+    for raw in raw_nodes:
+        node_id = raw.get('id')
+        data = raw.get('data') or {}
+        block_type = data.get('type')
+        title = data.get('title')
+        if not node_id or not block_type or not title:
+            continue
+        nodes.append(
+            NodeRecord(
+                id=node_id,
+                type=str(block_type),
+                title=str(title),
+                content=data.get('content'),
+            )
+        )
+    return nodes
+
+
+def parse_edges(raw_edges: List[dict]) -> List[EdgeRecord]:
+    edges: List[EdgeRecord] = []
+    for raw in raw_edges:
+        source = raw.get('source')
+        target = raw.get('target')
+        if not source or not target:
+            continue
+        edges.append(EdgeRecord(source=str(source), target=str(target)))
+    return edges
+
+
+def build_incoming_map(edges: List[EdgeRecord]) -> Mapping[str, List[str]]:
+    incoming: dict[str, List[str]] = {}
+    for edge in edges:
+        incoming.setdefault(edge.target, []).append(edge.source)
+    return incoming
+
+
+def collect_upstream_ids(target_id: str, incoming: Mapping[str, List[str]], max_depth: int) -> List[str]:
+    visited: set[str] = set()
+    queue: List[tuple[str, int]] = [(target_id, 0)]
+
+    while queue:
+        current, depth = queue.pop(0)
+        if depth >= max_depth:
+            continue
+
+        for parent in incoming.get(current, []):
+            if parent in visited:
+                continue
+            visited.add(parent)
+            queue.append((parent, depth + 1))
+
+    return list(visited)
+
+
+def sort_nodes(nodes: List[NodeRecord]) -> List[NodeRecord]:
+    def sort_key(node: NodeRecord):
+        order = TYPE_ORDER.index(node.type) if node.type in TYPE_ORDER else len(TYPE_ORDER)
+        return (order, node.title.lower())
+
+    return sorted(nodes, key=sort_key)
+
+
+def build_prompt(
+    target: NodeRecord,
+    upstream_nodes: List[NodeRecord],
+    campaign_title: Optional[str],
+    config: PromptConfig,
+) -> PromptItem:
+    context_nodes = sort_nodes(upstream_nodes)[: config.max_context_items]
+    context_titles = [node.title for node in context_nodes]
+    context_lines = [
+        f"- {TYPE_LABELS.get(node.type, node.type)}: {node.title}" for node in context_nodes
+    ]
+
+    prompt_lines = [
+        f"Campaign: {campaign_title or 'Untitled Campaign'}",
+        f"Target: {TYPE_LABELS.get(target.type, target.type)} - {target.title}",
+        "Context:",
+        *(context_lines if context_lines else ["- None"]),
+        "Instructions:",
+        "Write 2-3 concise sentences for this story block.",
+        "Stay consistent with the context and keep the tone cinematic.",
+    ]
+
+    prompt = "\n".join(prompt_lines)
+
+    while len(prompt) > config.max_prompt_chars and context_lines:
+        context_lines.pop()
+        prompt_lines = [
+            f"Campaign: {campaign_title or 'Untitled Campaign'}",
+            f"Target: {TYPE_LABELS.get(target.type, target.type)} - {target.title}",
+            "Context:",
+            *(context_lines if context_lines else ["- None"]),
+            "Instructions:",
+            "Write 2-3 concise sentences for this story block.",
+            "Stay consistent with the context and keep the tone cinematic.",
+        ]
+        prompt = "\n".join(prompt_lines)
+
+    if len(prompt) > config.max_prompt_chars:
+        prompt = prompt[: config.max_prompt_chars]
+
+    return PromptItem(
+        id=target.id,
+        prompt=prompt,
+        target_title=target.title,
+        context_titles=context_titles,
+    )
+
+
+def build_prompts(
+    target_ids: List[str],
+    raw_nodes: List[dict],
+    raw_edges: List[dict],
+    campaign_title: Optional[str],
+    config: PromptConfig,
+) -> List[PromptItem]:
+    nodes = parse_nodes(raw_nodes)
+    edges = parse_edges(raw_edges)
+    node_map = {node.id: node for node in nodes}
+    incoming = build_incoming_map(edges)
+
+    prompts: List[PromptItem] = []
+    for target_id in target_ids:
+        target = node_map.get(target_id)
+        if not target:
+            continue
+
+        upstream_ids = collect_upstream_ids(target_id, incoming, config.max_depth)
+        upstream_nodes = [node_map[node_id] for node_id in upstream_ids if node_id in node_map]
+        prompts.append(build_prompt(target, upstream_nodes, campaign_title, config))
+
+    return prompts

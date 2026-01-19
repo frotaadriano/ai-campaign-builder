@@ -1,4 +1,4 @@
-# Phase 4 ? Real AI Integration
+# Phase 4 - Real AI Integration
 
 Goal:
 Integrate a real AI provider with controlled context.

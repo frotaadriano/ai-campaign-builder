@@ -6,6 +6,7 @@ import { BlockPalette } from '../components/BlockPalette'
 import { Inspector } from '../components/Inspector'
 import {
   createCampaign,
+  generateBlocks,
   fetchCampaign,
   listCampaigns,
   updateCampaign,
@@ -204,16 +205,30 @@ export const App = () => {
     }
 
     setIsGenerating(true)
-    try {
-      const updates = generateMock(dirtyNodeIds, nodes, edges)
-      applyGeneratedContent(updates)
-    } catch (generationError) {
-      const message =
-        generationError instanceof Error ? generationError.message : 'Failed to regenerate.'
-      setError(message)
-    } finally {
-      setIsGenerating(false)
+    setError(null)
+    const run = async () => {
+      try {
+        const response = await generateBlocks({
+          campaignTitle,
+          nodes,
+          edges,
+          targetIds: dirtyNodeIds,
+        })
+        applyGeneratedContent(response.items)
+      } catch (generationError) {
+        const updates = generateMock(dirtyNodeIds, nodes, edges)
+        applyGeneratedContent(updates)
+        const message =
+          generationError instanceof Error
+            ? `AI offline, used mock output. ${generationError.message}`
+            : 'AI offline, used mock output.'
+        setError(message)
+      } finally {
+        setIsGenerating(false)
+      }
     }
+
+    void run()
   }
 
   const statusLabel =
@@ -244,7 +259,7 @@ export const App = () => {
         <div className="app-header__left">
           <div>
             <div className="app-title">AI Campaign Builder</div>
-            <div className="app-subtitle">Phase 3 - AI Mock Integration</div>
+            <div className="app-subtitle">Phase 4 - Real AI Integration</div>
           </div>
           <div className="campaign-field">
             <label className="campaign-field__label" htmlFor="campaign-title">

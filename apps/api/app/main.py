@@ -1,11 +1,14 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 
 from app.api.campaigns import router as campaigns_router
+from app.api.generate import router as generate_router
 from app.db.session import Base, engine, ensure_data_dir
 
 
 def create_app() -> FastAPI:
+    load_dotenv()
     ensure_data_dir()
     Base.metadata.create_all(bind=engine)
 
@@ -25,6 +28,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(campaigns_router, prefix='/campaigns', tags=['campaigns'])
+    app.include_router(generate_router, prefix='/generate', tags=['generation'])
     return app
 
 

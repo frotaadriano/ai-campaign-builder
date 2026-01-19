@@ -22,6 +22,26 @@ export type CampaignSummary = {
   updated_at: string
 }
 
+export type GenerationRequest = {
+  campaignTitle?: string
+  nodes: Node<StoryBlockData>[]
+  edges: Edge[]
+  targetIds: string[]
+  maxDepth?: number
+  maxContextItems?: number
+  maxPromptChars?: number
+}
+
+export type GeneratedBlock = {
+  id: string
+  content: string
+}
+
+export type GenerationResponse = {
+  mode: string
+  items: GeneratedBlock[]
+}
+
 const request = async <T>(path: string, options?: RequestInit): Promise<T> => {
   const response = await fetch(`${API_BASE}${path}`, {
     headers: {
@@ -53,4 +73,18 @@ export const updateCampaign = (id: string, payload: CampaignPayload) =>
   request<Campaign>(`/campaigns/${id}`, {
     method: 'PUT',
     body: JSON.stringify(payload),
+  })
+
+export const generateBlocks = (payload: GenerationRequest) =>
+  request<GenerationResponse>('/generate', {
+    method: 'POST',
+    body: JSON.stringify({
+      campaign_title: payload.campaignTitle,
+      nodes: payload.nodes,
+      edges: payload.edges,
+      target_ids: payload.targetIds,
+      max_depth: payload.maxDepth,
+      max_context_items: payload.maxContextItems,
+      max_prompt_chars: payload.maxPromptChars,
+    }),
   })

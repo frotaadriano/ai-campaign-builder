@@ -105,3 +105,19 @@ This project is open-source and welcomes contributions:
 ## 📜 License
 
 MIT License
+
+Backend (API)
+
+cd D:\DevRepos\ai-campaign-builder\apps\api
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
+Se a porta 8000 já estiver ocupada:
+
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8001
+Frontend (Web)
+
+cd D:\DevRepos\ai-campaign-builder\apps\web
+npm run dev
+Se usar 8001 no backend, rode o frontend com:
+
+$env:VITE_API_URL = 'http://localhost:8001'
+npm run dev 
