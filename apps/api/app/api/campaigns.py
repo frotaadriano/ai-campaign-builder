@@ -32,6 +32,7 @@ def _to_response(campaign: Campaign) -> CampaignResponse:
         title=campaign.title,
         nodes=payload.get('nodes', []),
         edges=payload.get('edges', []),
+        party_profile=payload.get('party_profile'),
         created_at=campaign.created_at,
         updated_at=campaign.updated_at,
     )
@@ -53,7 +54,13 @@ def list_campaigns(db: Session = Depends(get_session)):
 @router.post('/', response_model=CampaignResponse, status_code=status.HTTP_201_CREATED)
 def create_campaign(payload: CampaignCreate, db: Session = Depends(get_session)):
     campaign_id = payload.id or uuid4().hex
-    data = json.dumps({'nodes': payload.nodes, 'edges': payload.edges})
+    data = json.dumps(
+        {
+            'nodes': payload.nodes,
+            'edges': payload.edges,
+            'party_profile': payload.party_profile.model_dump() if payload.party_profile else None,
+        }
+    )
     now = datetime.utcnow()
 
     campaign = Campaign(
@@ -86,7 +93,13 @@ def update_campaign(
         raise HTTPException(status_code=404, detail='Campanha nao encontrada')
 
     campaign.title = payload.title
-    campaign.data = json.dumps({'nodes': payload.nodes, 'edges': payload.edges})
+    campaign.data = json.dumps(
+        {
+            'nodes': payload.nodes,
+            'edges': payload.edges,
+            'party_profile': payload.party_profile.model_dump() if payload.party_profile else None,
+        }
+    )
     campaign.updated_at = datetime.utcnow()
 
     db.commit()

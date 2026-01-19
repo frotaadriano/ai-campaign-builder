@@ -40,3 +40,12 @@ export type StoryBlockData = {
   summary?: string
   content?: string
 }
+
+export type PartyProfile = {
+  groupName?: string
+  averageLevel?: string
+  partySize?: string
+  classes?: string
+  goals?: string
+  summary?: string
+}

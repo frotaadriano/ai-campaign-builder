@@ -16,9 +16,10 @@ def build_prompt_items(
     raw_nodes: List[dict],
     raw_edges: List[dict],
     campaign_title: Optional[str],
+    party_profile: Optional[dict],
     config: PromptConfig,
 ) -> List[PromptItem]:
-    return build_prompts(target_ids, raw_nodes, raw_edges, campaign_title, config)
+    return build_prompts(target_ids, raw_nodes, raw_edges, campaign_title, party_profile, config)
 
 
 async def generate_story_blocks(
@@ -26,6 +27,7 @@ async def generate_story_blocks(
     raw_nodes: List[dict],
     raw_edges: List[dict],
     campaign_title: Optional[str],
+    party_profile: Optional[dict],
     config: PromptConfig,
 ) -> Tuple[str, List[GeneratedItem]]:
     logger.info(
@@ -38,7 +40,9 @@ async def generate_story_blocks(
         "Relacoes: %s",
         [f"{edge.get('source')} -> {edge.get('target')}" for edge in raw_edges],
     )
-    prompts = build_prompt_items(target_ids, raw_nodes, raw_edges, campaign_title, config)
+    prompts = build_prompt_items(
+        target_ids, raw_nodes, raw_edges, campaign_title, party_profile, config
+    )
     if not prompts:
         logger.info("Nenhum prompt gerado.")
         return ('none', [])

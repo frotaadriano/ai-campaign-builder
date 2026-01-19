@@ -5,7 +5,8 @@ import { generateMock } from '../ai/mockAdapter'
 import { Canvas } from '../canvas/Canvas'
 import { BlockPalette } from '../components/BlockPalette'
 import { Inspector } from '../components/Inspector'
-import { BLOCK_TYPES, type BlockType, type StoryBlockData } from '../models/types'
+import { PartyProfilePanel } from '../components/PartyProfile'
+import { BLOCK_TYPES, type BlockType, type PartyProfile, type StoryBlockData } from '../models/types'
 import {
   createCampaign,
   generateBlocks,
@@ -32,6 +33,7 @@ type CampaignSnapshot = {
   title: string
   nodes: Node<StoryBlockData>[]
   edges: Edge[]
+  partyProfile: PartyProfile
   signature: string
 }
 
@@ -43,7 +45,8 @@ const typeLabelMap = new Map<BlockType, string>(
 const buildSnapshot = (
   rawTitle: string,
   nodes: Node<StoryBlockData>[],
-  edges: Edge[]
+  edges: Edge[],
+  partyProfile: PartyProfile
 ): CampaignSnapshot => {
   const title = rawTitle.trim() || 'Campanha sem titulo'
 
@@ -74,12 +77,27 @@ const buildSnapshot = (
       return left.localeCompare(right)
     })
 
-  const signature = JSON.stringify({ title, nodes: sanitizedNodes, edges: sanitizedEdges })
+  const sanitizedProfile = {
+    groupName: partyProfile.groupName?.trim(),
+    averageLevel: partyProfile.averageLevel?.trim(),
+    partySize: partyProfile.partySize?.trim(),
+    classes: partyProfile.classes?.trim(),
+    goals: partyProfile.goals?.trim(),
+    summary: partyProfile.summary?.trim(),
+  }
+
+  const signature = JSON.stringify({
+    title,
+    nodes: sanitizedNodes,
+    edges: sanitizedEdges,
+    partyProfile: sanitizedProfile,
+  })
 
   return {
     title,
     nodes: sanitizedNodes,
     edges: sanitizedEdges,
+    partyProfile: sanitizedProfile,
     signature,
   }
 }
@@ -122,6 +140,7 @@ export const App = () => {
   const edges = useCanvasStore((state) => state.edges)
   const campaignId = useCanvasStore((state) => state.campaignId)
   const campaignTitle = useCanvasStore((state) => state.campaignTitle)
+  const partyProfile = useCanvasStore((state) => state.partyProfile)
   const hasHydrated = useCanvasStore((state) => state.hasHydrated)
   const dirtyNodeIds = useCanvasStore((state) => state.dirtyNodeIds)
   const selectedNodeIds = useCanvasStore((state) => state.selectedNodeIds)
@@ -148,15 +167,20 @@ export const App = () => {
   const savedSignatureRef = useRef<string | null>(null)
 
   const campaignSnapshot = useMemo(
-    () => buildSnapshot(campaignTitle, nodes, edges),
-    [campaignTitle, nodes, edges]
+    () => buildSnapshot(campaignTitle, nodes, edges, partyProfile),
+    [campaignTitle, nodes, edges, partyProfile]
   )
 
   const hydrateCampaign = useCallback(
     (campaign: Campaign) => {
-      const snapshot = buildSnapshot(campaign.title, campaign.nodes, campaign.edges)
+      const snapshot = buildSnapshot(
+        campaign.title,
+        campaign.nodes,
+        campaign.edges,
+        campaign.partyProfile ?? {}
+      )
       setCampaignMeta(campaign.id, campaign.title)
-      setCampaignData(snapshot.nodes, snapshot.edges)
+      setCampaignData(snapshot.nodes, snapshot.edges, snapshot.partyProfile)
       setLastSavedAt(campaign.updated_at)
       savedSignatureRef.current = snapshot.signature
     },
@@ -181,6 +205,7 @@ export const App = () => {
           title: 'Campanha sem titulo',
           nodes: [],
           edges: [],
+          partyProfile: {},
         })
         if (!isActive) {
           return
@@ -246,6 +271,7 @@ export const App = () => {
             title: snapshot.title,
             nodes: snapshot.nodes,
             edges: snapshot.edges,
+            partyProfile: snapshot.partyProfile,
           })
           hydrateCampaign(created)
           savedSignatureRef.current = snapshot.signature
@@ -263,6 +289,7 @@ export const App = () => {
           title: snapshot.title,
           nodes: snapshot.nodes,
           edges: snapshot.edges,
+          partyProfile: snapshot.partyProfile,
         })
         setLastSavedAt(updated.updated_at)
         savedSignatureRef.current = snapshot.signature
@@ -313,6 +340,7 @@ export const App = () => {
         title: 'Campanha sem titulo',
         nodes: [],
         edges: [],
+        partyProfile: {},
       })
       hydrateCampaign(created)
       setHasHydrated(true)
@@ -386,6 +414,7 @@ export const App = () => {
       try {
         const response = await generateBlocks({
           campaignTitle,
+          partyProfile,
           nodes: campaignSnapshot.nodes,
           edges: campaignSnapshot.edges,
           targetIds,
@@ -536,7 +565,10 @@ export const App = () => {
         <div className="canvas-wrap">
           <Canvas />
         </div>
-        <Inspector />
+        <div className="side-column">
+          <PartyProfilePanel />
+          <Inspector />
+        </div>
       </div>
       {isStoryOpen ? (
         <div className="story-modal">

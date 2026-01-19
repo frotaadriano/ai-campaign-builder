@@ -292,6 +292,14 @@ body {
   min-height: 0;
 }
 
+.side-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  overflow: auto;
+}
+
 .panel {
   background: var(--panel);
   border: 1px solid var(--panel-border);
@@ -323,6 +331,15 @@ body {
 .panel--palette,
 .panel--inspector {
   overflow: auto;
+}
+
+.panel--profile {
+  overflow: auto;
+}
+
+.profile-status {
+  font-size: 12px;
+  color: var(--muted);
 }
 
 .palette-list {

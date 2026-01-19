@@ -14,11 +14,13 @@ async def generate_blocks(payload: GenerationRequest):
         max_context_items=payload.max_context_items,
         max_prompt_chars=payload.max_prompt_chars,
     )
+    party_profile = payload.party_profile.model_dump(exclude_none=True) if payload.party_profile else None
     mode, items = await generate_story_blocks(
         target_ids=payload.target_ids,
         raw_nodes=payload.nodes,
         raw_edges=payload.edges,
         campaign_title=payload.campaign_title,
+        party_profile=party_profile,
         config=config,
     )
     return GenerationResponse(

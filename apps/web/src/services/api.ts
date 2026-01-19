@@ -1,6 +1,6 @@
 import type { Edge, Node } from 'reactflow'
 
-import type { StoryBlockData } from '../models/types'
+import type { PartyProfile, StoryBlockData } from '../models/types'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
@@ -8,6 +8,7 @@ export type CampaignPayload = {
   title: string
   nodes: Node<StoryBlockData>[]
   edges: Edge[]
+  partyProfile?: PartyProfile
 }
 
 export type Campaign = CampaignPayload & {
@@ -22,8 +23,68 @@ export type CampaignSummary = {
   updated_at: string
 }
 
+type PartyProfileApi = {
+  group_name?: string
+  average_level?: string
+  party_size?: string
+  classes?: string
+  goals?: string
+  summary?: string
+}
+
+type CampaignApi = {
+  id: string
+  title: string
+  nodes: Node<StoryBlockData>[]
+  edges: Edge[]
+  party_profile?: PartyProfileApi
+  created_at: string
+  updated_at: string
+}
+
+const toApiProfile = (profile?: PartyProfile): PartyProfileApi | undefined => {
+  if (!profile) {
+    return undefined
+  }
+
+  return {
+    group_name: profile.groupName,
+    average_level: profile.averageLevel,
+    party_size: profile.partySize,
+    classes: profile.classes,
+    goals: profile.goals,
+    summary: profile.summary,
+  }
+}
+
+const fromApiProfile = (profile?: PartyProfileApi): PartyProfile | undefined => {
+  if (!profile) {
+    return undefined
+  }
+
+  return {
+    groupName: profile.group_name,
+    averageLevel: profile.average_level,
+    partySize: profile.party_size,
+    classes: profile.classes,
+    goals: profile.goals,
+    summary: profile.summary,
+  }
+}
+
+const normalizeCampaign = (campaign: CampaignApi): Campaign => ({
+  id: campaign.id,
+  title: campaign.title,
+  nodes: campaign.nodes,
+  edges: campaign.edges,
+  partyProfile: fromApiProfile(campaign.party_profile),
+  created_at: campaign.created_at,
+  updated_at: campaign.updated_at,
+})
+
 export type GenerationRequest = {
   campaignTitle?: string
+  partyProfile?: PartyProfile
   nodes: Node<StoryBlockData>[]
   edges: Edge[]
   targetIds: string[]
@@ -62,25 +123,41 @@ const request = async <T>(path: string, options?: RequestInit): Promise<T> => {
 
 export const listCampaigns = () => request<CampaignSummary[]>('/campaigns')
 
-export const fetchCampaign = (id: string) => request<Campaign>(`/campaigns/${id}`)
+export const fetchCampaign = async (id: string) =>
+  normalizeCampaign(await request<CampaignApi>(`/campaigns/${id}`))
 
-export const createCampaign = (payload: CampaignPayload) =>
-  request<Campaign>('/campaigns', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  })
+export const createCampaign = async (payload: CampaignPayload) =>
+  normalizeCampaign(
+    await request<CampaignApi>('/campaigns', {
+      method: 'POST',
+      body: JSON.stringify({
+        title: payload.title,
+        nodes: payload.nodes,
+        edges: payload.edges,
+        party_profile: toApiProfile(payload.partyProfile),
+      }),
+    })
+  )
 
-export const updateCampaign = (id: string, payload: CampaignPayload) =>
-  request<Campaign>(`/campaigns/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(payload),
-  })
+export const updateCampaign = async (id: string, payload: CampaignPayload) =>
+  normalizeCampaign(
+    await request<CampaignApi>(`/campaigns/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        title: payload.title,
+        nodes: payload.nodes,
+        edges: payload.edges,
+        party_profile: toApiProfile(payload.partyProfile),
+      }),
+    })
+  )
 
 export const generateBlocks = (payload: GenerationRequest) =>
   request<GenerationResponse>('/generate', {
     method: 'POST',
     body: JSON.stringify({
       campaign_title: payload.campaignTitle,
+      party_profile: toApiProfile(payload.partyProfile),
       nodes: payload.nodes,
       edges: payload.edges,
       target_ids: payload.targetIds,

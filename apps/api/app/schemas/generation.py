@@ -2,9 +2,12 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
+from app.schemas.campaigns import PartyProfile
+
 
 class GenerationRequest(BaseModel):
     campaign_title: Optional[str] = None
+    party_profile: Optional[PartyProfile] = None
     nodes: List[dict] = Field(default_factory=list)
     edges: List[dict] = Field(default_factory=list)
     target_ids: List[str] = Field(default_factory=list)

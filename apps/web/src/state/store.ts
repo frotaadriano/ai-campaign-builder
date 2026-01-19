@@ -11,7 +11,7 @@ import {
   type NodeChange,
 } from 'reactflow'
 
-import { BLOCK_TYPES, type BlockType, type StoryBlockData } from '../models/types'
+import { BLOCK_TYPES, type BlockType, type PartyProfile, type StoryBlockData } from '../models/types'
 
 const GRID_COLUMNS = 4
 const GRID_X = 220
@@ -134,6 +134,7 @@ type CanvasState = {
   edges: Edge[]
   campaignId: string | null
   campaignTitle: string
+  partyProfile: PartyProfile
   hasHydrated: boolean
   dirtyNodeIds: string[]
   selectedNodeId: string | null
@@ -146,7 +147,12 @@ type CanvasState = {
   setSelectedNodeIds: (nodeIds: string[]) => void
   setCampaignMeta: (id: string, title: string) => void
   setCampaignTitle: (title: string) => void
-  setCampaignData: (nodes: Node<StoryBlockData>[], edges: Edge[]) => void
+  setCampaignData: (
+    nodes: Node<StoryBlockData>[],
+    edges: Edge[],
+    partyProfile: PartyProfile
+  ) => void
+  updatePartyProfile: (patch: Partial<PartyProfile>) => void
   setHasHydrated: (value: boolean) => void
   applyGeneratedContent: (updates: Array<{ id: string; content: string; title?: string }>) => void
   onNodesChange: (changes: NodeChange[]) => void
@@ -160,6 +166,7 @@ export const useCanvasStore = create<CanvasState>()(
     edges: [],
     campaignId: null,
     campaignTitle: 'Campanha sem titulo',
+    partyProfile: {},
     hasHydrated: false,
     dirtyNodeIds: [],
     selectedNodeId: null,
@@ -264,13 +271,22 @@ export const useCanvasStore = create<CanvasState>()(
         state.campaignTitle = title
       })
     },
-    setCampaignData: (nodes, edges) => {
+    setCampaignData: (nodes, edges, partyProfile) => {
       set((state) => {
         state.nodes = nodes
         state.edges = edges
+        state.partyProfile = partyProfile
         state.selectedNodeId = null
         state.selectedNodeIds = []
         state.dirtyNodeIds = []
+      })
+    },
+    updatePartyProfile: (patch) => {
+      set((state) => {
+        state.partyProfile = {
+          ...state.partyProfile,
+          ...patch,
+        }
       })
     },
     setHasHydrated: (value) => {

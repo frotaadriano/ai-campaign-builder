@@ -112,6 +112,7 @@ def build_prompt(
     target: NodeRecord,
     upstream_nodes: List[NodeRecord],
     campaign_title: Optional[str],
+    party_profile: Optional[dict],
     config: PromptConfig,
 ) -> PromptItem:
     context_nodes = sort_nodes(upstream_nodes)[: config.max_context_items]
@@ -120,10 +121,29 @@ def build_prompt(
         f"- {TYPE_LABELS.get(node.type, node.type)}: {node.title}" for node in context_nodes
     ]
 
+    party_lines = []
+    if party_profile:
+        party_lines = [
+            "Perfil do grupo:",
+            *[
+                line
+                for line in [
+                    f"- Nome do grupo: {party_profile.get('group_name')}" if party_profile.get('group_name') else None,
+                    f"- Nivel medio: {party_profile.get('average_level')}" if party_profile.get('average_level') else None,
+                    f"- Tamanho do grupo: {party_profile.get('party_size')}" if party_profile.get('party_size') else None,
+                    f"- Classes: {party_profile.get('classes')}" if party_profile.get('classes') else None,
+                    f"- Objetivo: {party_profile.get('goals')}" if party_profile.get('goals') else None,
+                    f"- Resumo: {party_profile.get('summary')}" if party_profile.get('summary') else None,
+                ]
+                if line
+            ],
+        ]
+
     prompt_lines = [
         f"Campanha: {campaign_title or 'Campanha sem titulo'}",
         f"Alvo: {TYPE_LABELS.get(target.type, target.type)} - {target.title}",
         f"Tipo do bloco: {TYPE_LABELS.get(target.type, target.type)}",
+        *party_lines,
         "Contexto:",
         *(context_lines if context_lines else ["- Nenhum"]),
         "Instrucoes:",
@@ -145,6 +165,7 @@ def build_prompt(
             f"Campanha: {campaign_title or 'Campanha sem titulo'}",
             f"Alvo: {TYPE_LABELS.get(target.type, target.type)} - {target.title}",
             f"Tipo do bloco: {TYPE_LABELS.get(target.type, target.type)}",
+            *party_lines,
             "Contexto:",
             *(context_lines if context_lines else ["- Nenhum"]),
             "Instrucoes:",
@@ -176,6 +197,7 @@ def build_prompts(
     raw_nodes: List[dict],
     raw_edges: List[dict],
     campaign_title: Optional[str],
+    party_profile: Optional[dict],
     config: PromptConfig,
 ) -> List[PromptItem]:
     nodes = parse_nodes(raw_nodes)
@@ -191,6 +213,6 @@ def build_prompts(
 
         upstream_ids = collect_upstream_ids(target_id, incoming, config.max_depth)
         upstream_nodes = [node_map[node_id] for node_id in upstream_ids if node_id in node_map]
-        prompts.append(build_prompt(target, upstream_nodes, campaign_title, config))
+        prompts.append(build_prompt(target, upstream_nodes, campaign_title, party_profile, config))
 
     return prompts
