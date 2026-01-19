@@ -9,28 +9,28 @@ export type BlockTypeDefinition = {
 export const BLOCK_TYPES: BlockTypeDefinition[] = [
   {
     type: 'theme',
-    label: 'Theme',
-    description: 'The core idea or mood that ties the story together.',
+    label: 'Tema',
+    description: 'A ideia central ou o clima que amarra a historia.',
   },
   {
     type: 'location',
-    label: 'Location',
-    description: 'A place that anchors encounters or discoveries.',
+    label: 'Local',
+    description: 'Um lugar que ancora encontros ou descobertas.',
   },
   {
     type: 'npc',
     label: 'NPC',
-    description: 'A character with goals, secrets, or conflicts.',
+    description: 'Um personagem com objetivos, segredos ou conflitos.',
   },
   {
     type: 'event',
-    label: 'Event',
-    description: 'A moment that changes the direction of the story.',
+    label: 'Evento',
+    description: 'Um momento que muda o rumo da historia.',
   },
   {
     type: 'twist',
-    label: 'Twist',
-    description: 'A reveal that reframes what the players thought.',
+    label: 'Reviravolta',
+    description: 'Uma revelacao que muda o que os jogadores achavam.',
   },
 ]
 

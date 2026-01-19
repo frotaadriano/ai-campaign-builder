@@ -19,9 +19,18 @@ const GRID_Y = 140
 const GRID_START_X = 120
 const GRID_START_Y = 120
 
+const DEFAULT_PREFIX: Record<BlockType, string> = {
+  theme: 'Novo',
+  location: 'Novo',
+  npc: 'Novo',
+  event: 'Novo',
+  twist: 'Nova',
+}
+
 const getDefaultTitle = (type: BlockType): string => {
   const entry = BLOCK_TYPES.find((block) => block.type === type)
-  return entry ? `New ${entry.label}` : 'New Block'
+  const prefix = DEFAULT_PREFIX[type] ?? 'Novo'
+  return entry ? `${prefix} ${entry.label}` : 'Novo bloco'
 }
 
 const getNextPosition = (index: number) => {
@@ -128,10 +137,12 @@ type CanvasState = {
   hasHydrated: boolean
   dirtyNodeIds: string[]
   selectedNodeId: string | null
+  selectedNodeIds: string[]
   addBlock: (type: BlockType) => void
   updateBlock: (id: string, patch: Partial<StoryBlockData>) => void
   removeNodes: (nodeIds: string[]) => void
   setSelectedNodeId: (nodeId: string | null) => void
+  setSelectedNodeIds: (nodeIds: string[]) => void
   setCampaignMeta: (id: string, title: string) => void
   setCampaignTitle: (title: string) => void
   setCampaignData: (nodes: Node<StoryBlockData>[], edges: Edge[]) => void
@@ -147,10 +158,11 @@ export const useCanvasStore = create<CanvasState>()(
     nodes: [],
     edges: [],
     campaignId: null,
-    campaignTitle: 'Untitled Campaign',
+    campaignTitle: 'Campanha sem titulo',
     hasHydrated: false,
     dirtyNodeIds: [],
     selectedNodeId: null,
+    selectedNodeIds: [],
     addBlock: (type) => {
       set((state) => {
         const index = state.nodes.length
@@ -167,6 +179,7 @@ export const useCanvasStore = create<CanvasState>()(
           },
         })
         state.selectedNodeId = id
+        state.selectedNodeIds = [id]
         markDirtyFromState(state, [id])
       })
     },
@@ -213,6 +226,11 @@ export const useCanvasStore = create<CanvasState>()(
         state.selectedNodeId = nodeId
       })
     },
+    setSelectedNodeIds: (nodeIds) => {
+      set((state) => {
+        state.selectedNodeIds = nodeIds
+      })
+    },
     setCampaignMeta: (id, title) => {
       set((state) => {
         state.campaignId = id
@@ -229,6 +247,7 @@ export const useCanvasStore = create<CanvasState>()(
         state.nodes = nodes
         state.edges = edges
         state.selectedNodeId = null
+        state.selectedNodeIds = []
         state.dirtyNodeIds = []
       })
     },

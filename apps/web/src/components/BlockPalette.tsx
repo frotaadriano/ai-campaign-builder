@@ -6,8 +6,8 @@ export const BlockPalette = () => {
 
   return (
     <div className="panel panel--palette">
-      <div className="panel__title">Story Blocks</div>
-      <div className="panel__subtitle">Drag the story into shape.</div>
+      <div className="panel__title">Blocos de historia</div>
+      <div className="panel__subtitle">Arraste a historia para moldar.</div>
       <div className="palette-list">
         {BLOCK_TYPES.map((block) => (
           <button

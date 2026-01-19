@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { Edge, Node } from 'reactflow'
 
 import { generateMock } from '../ai/mockAdapter'
 import { Canvas } from '../canvas/Canvas'
 import { BlockPalette } from '../components/BlockPalette'
 import { Inspector } from '../components/Inspector'
+import { BLOCK_TYPES, type BlockType, type StoryBlockData } from '../models/types'
 import {
   createCampaign,
   generateBlocks,
@@ -18,11 +20,67 @@ const SAVE_DEBOUNCE_MS = 700
 
 const formatSavedTime = (value: string | null) => {
   if (!value) {
-    return 'Not saved'
+    return 'Nao salvo'
   }
 
   const time = new Date(value)
-  return `Saved ${time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+  return `Salvo ${time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+}
+
+type CampaignSnapshot = {
+  title: string
+  nodes: Node<StoryBlockData>[]
+  edges: Edge[]
+  signature: string
+}
+
+const typeOrder = BLOCK_TYPES.map((block) => block.type)
+const typeLabelMap = new Map<BlockType, string>(
+  BLOCK_TYPES.map((block) => [block.type, block.label])
+)
+
+const buildSnapshot = (
+  rawTitle: string,
+  nodes: Node<StoryBlockData>[],
+  edges: Edge[]
+): CampaignSnapshot => {
+  const title = rawTitle.trim() || 'Campanha sem titulo'
+
+  const sanitizedNodes = nodes
+    .map((node) => ({
+      id: node.id,
+      type: node.type,
+      position: node.position,
+      data: {
+        type: node.data.type,
+        title: node.data.title,
+        content: node.data.content,
+        summary: node.data.summary,
+      },
+    }))
+    .sort((a, b) => a.id.localeCompare(b.id))
+
+  const sanitizedEdges = edges
+    .map((edge) => ({
+      id: edge.id,
+      source: edge.source,
+      target: edge.target,
+      type: edge.type,
+    }))
+    .sort((a, b) => {
+      const left = a.id ?? `${a.source}-${a.target}`
+      const right = b.id ?? `${b.source}-${b.target}`
+      return left.localeCompare(right)
+    })
+
+  const signature = JSON.stringify({ title, nodes: sanitizedNodes, edges: sanitizedEdges })
+
+  return {
+    title,
+    nodes: sanitizedNodes,
+    edges: sanitizedEdges,
+    signature,
+  }
 }
 
 export const App = () => {
@@ -32,6 +90,7 @@ export const App = () => {
   const campaignTitle = useCanvasStore((state) => state.campaignTitle)
   const hasHydrated = useCanvasStore((state) => state.hasHydrated)
   const dirtyNodeIds = useCanvasStore((state) => state.dirtyNodeIds)
+  const selectedNodeIds = useCanvasStore((state) => state.selectedNodeIds)
   const setCampaignMeta = useCanvasStore((state) => state.setCampaignMeta)
   const setCampaignTitle = useCanvasStore((state) => state.setCampaignTitle)
   const setCampaignData = useCanvasStore((state) => state.setCampaignData)
@@ -42,15 +101,24 @@ export const App = () => {
   const [error, setError] = useState<string | null>(null)
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isStoryOpen, setIsStoryOpen] = useState(false)
 
   const savingRef = useRef(false)
   const skipAutoSave = useRef(true)
+  const savedSignatureRef = useRef<string | null>(null)
+
+  const campaignSnapshot = useMemo(
+    () => buildSnapshot(campaignTitle, nodes, edges),
+    [campaignTitle, nodes, edges]
+  )
 
   const hydrateCampaign = useCallback(
     (campaign: Campaign) => {
+      const snapshot = buildSnapshot(campaign.title, campaign.nodes, campaign.edges)
       setCampaignMeta(campaign.id, campaign.title)
-      setCampaignData(campaign.nodes, campaign.edges)
+      setCampaignData(snapshot.nodes, snapshot.edges)
       setLastSavedAt(campaign.updated_at)
+      savedSignatureRef.current = snapshot.signature
     },
     [setCampaignData, setCampaignMeta]
   )
@@ -69,7 +137,7 @@ export const App = () => {
 
       if (campaigns.length === 0) {
         const created = await createCampaign({
-          title: 'Untitled Campaign',
+          title: 'Campanha sem titulo',
           nodes: [],
           edges: [],
         })
@@ -95,7 +163,8 @@ export const App = () => {
         return
       }
 
-      const message = loadError instanceof Error ? loadError.message : 'Failed to load campaign.'
+      const message =
+        loadError instanceof Error ? loadError.message : 'Falha ao carregar campanha.'
       setError(message)
       setStatus('error')
     })
@@ -105,32 +174,53 @@ export const App = () => {
     }
   }, [hydrateCampaign, setHasHydrated])
 
-  const saveCampaign = useCallback(async () => {
-    if (!campaignId || savingRef.current) {
-      return
-    }
+  const saveCampaign = useCallback(
+    async (snapshot: CampaignSnapshot, allowCreate: boolean) => {
+      if (savingRef.current) {
+        return
+      }
 
-    savingRef.current = true
-    setStatus('saving')
-    setError(null)
+      savingRef.current = true
+      setStatus('saving')
+      setError(null)
 
-    try {
-      const title = campaignTitle.trim() || 'Untitled Campaign'
-      const updated = await updateCampaign(campaignId, {
-        title,
-        nodes,
-        edges,
-      })
-      setLastSavedAt(updated.updated_at)
-      setStatus('idle')
-    } catch (saveError) {
-      const message = saveError instanceof Error ? saveError.message : 'Failed to save.'
-      setError(message)
-      setStatus('error')
-    } finally {
-      savingRef.current = false
-    }
-  }, [campaignId, campaignTitle, edges, nodes])
+      try {
+        if (!campaignId && allowCreate) {
+          const created = await createCampaign({
+            title: snapshot.title,
+            nodes: snapshot.nodes,
+            edges: snapshot.edges,
+          })
+          hydrateCampaign(created)
+          savedSignatureRef.current = snapshot.signature
+          setStatus('idle')
+          return
+        }
+
+        if (!campaignId) {
+          setStatus('error')
+          setError('Campanha nao carregada.')
+          return
+        }
+
+        const updated = await updateCampaign(campaignId, {
+          title: snapshot.title,
+          nodes: snapshot.nodes,
+          edges: snapshot.edges,
+        })
+        setLastSavedAt(updated.updated_at)
+        savedSignatureRef.current = snapshot.signature
+        setStatus('idle')
+      } catch (saveError) {
+        const message = saveError instanceof Error ? saveError.message : 'Falha ao salvar.'
+        setError(message)
+        setStatus('error')
+      } finally {
+        savingRef.current = false
+      }
+    },
+    [campaignId, hydrateCampaign]
+  )
 
   useEffect(() => {
     if (!hasHydrated || !campaignId) {
@@ -143,15 +233,20 @@ export const App = () => {
 
     if (skipAutoSave.current) {
       skipAutoSave.current = false
+      savedSignatureRef.current = campaignSnapshot.signature
+      return
+    }
+
+    if (savedSignatureRef.current === campaignSnapshot.signature) {
       return
     }
 
     const timeout = setTimeout(() => {
-      void saveCampaign()
+      void saveCampaign(campaignSnapshot, false)
     }, SAVE_DEBOUNCE_MS)
 
     return () => clearTimeout(timeout)
-  }, [campaignId, campaignTitle, edges, hasHydrated, nodes, saveCampaign, status])
+  }, [campaignId, campaignSnapshot, hasHydrated, saveCampaign, status])
 
   const handleNewCampaign = async () => {
     setStatus('loading')
@@ -159,7 +254,7 @@ export const App = () => {
 
     try {
       const created = await createCampaign({
-        title: 'Untitled Campaign',
+        title: 'Campanha sem titulo',
         nodes: [],
         edges: [],
       })
@@ -168,7 +263,7 @@ export const App = () => {
       skipAutoSave.current = true
       setStatus('idle')
     } catch (createError) {
-      const message = createError instanceof Error ? createError.message : 'Failed to create.'
+      const message = createError instanceof Error ? createError.message : 'Falha ao criar.'
       setError(message)
       setStatus('error')
     }
@@ -189,18 +284,19 @@ export const App = () => {
       skipAutoSave.current = true
       setStatus('idle')
     } catch (reloadError) {
-      const message = reloadError instanceof Error ? reloadError.message : 'Failed to reload.'
+      const message = reloadError instanceof Error ? reloadError.message : 'Falha ao recarregar.'
       setError(message)
       setStatus('error')
     }
   }
 
   const handleSave = async () => {
-    await saveCampaign()
+    await saveCampaign(campaignSnapshot, true)
   }
 
   const handleRegenerate = () => {
-    if (dirtyNodeIds.length === 0 || isGenerating) {
+    const targetIds = selectedNodeIds.length > 0 ? selectedNodeIds : dirtyNodeIds
+    if (targetIds.length === 0 || isGenerating) {
       return
     }
 
@@ -210,18 +306,18 @@ export const App = () => {
       try {
         const response = await generateBlocks({
           campaignTitle,
-          nodes,
-          edges,
-          targetIds: dirtyNodeIds,
+          nodes: campaignSnapshot.nodes,
+          edges: campaignSnapshot.edges,
+          targetIds,
         })
         applyGeneratedContent(response.items)
       } catch (generationError) {
-        const updates = generateMock(dirtyNodeIds, nodes, edges)
+        const updates = generateMock(targetIds, campaignSnapshot.nodes, campaignSnapshot.edges)
         applyGeneratedContent(updates)
         const message =
           generationError instanceof Error
-            ? `AI offline, used mock output. ${generationError.message}`
-            : 'AI offline, used mock output.'
+            ? `IA offline, usando mock. ${generationError.message}`
+            : 'IA offline, usando mock.'
         setError(message)
       } finally {
         setIsGenerating(false)
@@ -233,11 +329,11 @@ export const App = () => {
 
   const statusLabel =
     status === 'loading'
-      ? 'Loading...'
+      ? 'Carregando...'
       : status === 'saving'
-      ? 'Saving...'
+      ? 'Salvando...'
       : status === 'error'
-      ? 'Save failed'
+      ? 'Falha ao salvar'
       : formatSavedTime(lastSavedAt)
 
   const statusClassName =
@@ -247,11 +343,35 @@ export const App = () => {
       ? 'status-pill status-pill--saving'
       : 'status-pill status-pill--ok'
 
+  const regenCount = selectedNodeIds.length > 0 ? selectedNodeIds.length : dirtyNodeIds.length
   const regenLabel = isGenerating
-    ? 'Regenerating...'
-    : dirtyNodeIds.length > 0
-    ? `Regenerate (${dirtyNodeIds.length})`
-    : 'Regenerate'
+    ? 'Regenerando...'
+    : regenCount > 0
+    ? `Regenerar (${regenCount})`
+    : 'Regenerar'
+
+  const storyText = useMemo(() => {
+    if (nodes.length === 0) {
+      return 'Nenhum bloco ainda.'
+    }
+
+    const sorted = [...nodes].sort((a, b) => {
+      const typeIndexA = typeOrder.indexOf(a.data.type)
+      const typeIndexB = typeOrder.indexOf(b.data.type)
+      if (typeIndexA !== typeIndexB) {
+        return typeIndexA - typeIndexB
+      }
+      return a.data.title.localeCompare(b.data.title)
+    })
+
+    return sorted
+      .map((node) => {
+        const label = typeLabelMap.get(node.data.type) ?? node.data.type
+        const content = node.data.content?.trim() || 'Sem texto gerado.'
+        return `${label}: ${node.data.title}\n${content}`
+      })
+      .join('\n\n')
+  }, [nodes])
 
   return (
     <div className="app-shell">
@@ -259,11 +379,11 @@ export const App = () => {
         <div className="app-header__left">
           <div>
             <div className="app-title">AI Campaign Builder</div>
-            <div className="app-subtitle">Phase 4 - Real AI Integration</div>
+            <div className="app-subtitle">Phase 4 - Integracao real de IA</div>
           </div>
           <div className="campaign-field">
             <label className="campaign-field__label" htmlFor="campaign-title">
-              Campaign
+              Campanha
             </label>
             <input
               id="campaign-title"
@@ -271,28 +391,31 @@ export const App = () => {
               type="text"
               value={campaignTitle}
               onChange={(event) => setCampaignTitle(event.target.value)}
-              placeholder="Untitled Campaign"
+              placeholder="Campanha sem titulo"
             />
           </div>
         </div>
         <div className="app-header__right">
           <span className={statusClassName}>{statusLabel}</span>
           <button type="button" className="ghost-button" onClick={handleNewCampaign}>
-            New
+            Novo
           </button>
           <button type="button" className="ghost-button" onClick={handleReload}>
-            Reload
+            Recarregar
           </button>
           <button type="button" className="primary-button" onClick={handleSave}>
-            Save
+            Salvar
           </button>
           <button
             type="button"
             className="ghost-button"
             onClick={handleRegenerate}
-            disabled={dirtyNodeIds.length === 0 || isGenerating}
+            disabled={regenCount === 0 || isGenerating}
           >
             {regenLabel}
+          </button>
+          <button type="button" className="ghost-button" onClick={() => setIsStoryOpen(true)}>
+            Historia
           </button>
         </div>
       </header>
@@ -304,6 +427,24 @@ export const App = () => {
         </div>
         <Inspector />
       </div>
+      {isStoryOpen ? (
+        <div className="story-modal">
+          <div className="story-modal__overlay" onClick={() => setIsStoryOpen(false)} />
+          <div className="story-modal__content">
+            <div className="story-modal__header">
+              <div className="story-modal__title">Historia montada</div>
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={() => setIsStoryOpen(false)}
+              >
+                Fechar
+              </button>
+            </div>
+            <div className="story-modal__body">{storyText}</div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

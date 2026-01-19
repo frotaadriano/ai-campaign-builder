@@ -31,9 +31,9 @@ class AIProviderConfig:
 
 
 class MockAdapter:
-    _adjectives = ['tangled', 'ancient', 'haunting', 'forgotten', 'restless']
-    _motifs = ['oath', 'ruin', 'rumor', 'rite', 'shadow']
-    _verbs = ['pulls', 'guides', 'fractures', 'echoes', 'shifts']
+    _adjectives = ['sombrio', 'antigo', 'inquieto', 'velado', 'misterioso']
+    _motifs = ['juramento', 'ruina', 'rumor', 'rito', 'sombra']
+    _verbs = ['puxa', 'guia', 'fratura', 'ecoa', 'muda']
 
     @staticmethod
     def _hash(value: str) -> int:
@@ -55,14 +55,17 @@ class MockAdapter:
             motif = self._pick(self._motifs, seed, 3)
             verb = self._pick(self._verbs, seed, 5)
             context_line = (
-                f"Influenced by {', '.join(item.context_titles)}."
+                f"Influenciado por {', '.join(item.context_titles)}."
                 if item.context_titles
-                else 'No upstream context yet.'
+                else 'Sem contexto conectado ainda.'
             )
             results.append(
                 GeneratedItem(
                     id=item.id,
-                    content=f"{item.target_title} becomes a {adjective} {motif} that {verb} the story. {context_line}",
+                    content=(
+                        f"{item.target_title} vira um {motif} {adjective} que {verb} a historia. "
+                        f"{context_line}"
+                    ),
                 )
             )
         return results
@@ -74,7 +77,7 @@ class OpenAIAdapter:
 
     async def generate(self, prompts: List[PromptItem]) -> List[GeneratedItem]:
         if not self._config.api_key:
-            raise RuntimeError('OPENAI_API_KEY is not set')
+            raise RuntimeError('OPENAI_API_KEY nao definido')
 
         headers = {'Authorization': f"Bearer {self._config.api_key}"}
         async with httpx.AsyncClient(base_url=self._config.base_url, headers=headers, timeout=30) as client:
@@ -85,7 +88,7 @@ class OpenAIAdapter:
                     'messages': [
                         {
                             'role': 'system',
-                            'content': 'You are a narrative designer for RPG campaigns.',
+                            'content': 'Voce e um designer de narrativa para campanhas de RPG.',
                         },
                         {
                             'role': 'user',
@@ -111,11 +114,11 @@ class AzureOpenAIAdapter:
 
     async def generate(self, prompts: List[PromptItem]) -> List[GeneratedItem]:
         if not self._config.api_key:
-            raise RuntimeError('AZURE_OPENAI_API_KEY is not set')
+            raise RuntimeError('AZURE_OPENAI_API_KEY nao definido')
         if not self._config.deployment:
-            raise RuntimeError('AZURE_OPENAI_DEPLOYMENT is not set')
+            raise RuntimeError('AZURE_OPENAI_DEPLOYMENT nao definido')
         if not self._config.api_version:
-            raise RuntimeError('AZURE_OPENAI_API_VERSION is not set')
+            raise RuntimeError('AZURE_OPENAI_API_VERSION nao definido')
 
         endpoint = self._config.base_url.rstrip('/')
         headers = {'api-key': self._config.api_key}
@@ -128,7 +131,7 @@ class AzureOpenAIAdapter:
                     'messages': [
                         {
                             'role': 'system',
-                            'content': 'You are a narrative designer for RPG campaigns.',
+                            'content': 'Voce e um designer de narrativa para campanhas de RPG.',
                         },
                         {
                             'role': 'user',

@@ -5,11 +5,11 @@ import type { BlockType, StoryBlockData } from '../models/types'
 const TYPE_ORDER: BlockType[] = ['theme', 'location', 'npc', 'event', 'twist']
 
 const TYPE_LABELS: Record<BlockType, string> = {
-  theme: 'Theme',
-  location: 'Location',
+  theme: 'Tema',
+  location: 'Local',
   npc: 'NPC',
-  event: 'Event',
-  twist: 'Twist',
+  event: 'Evento',
+  twist: 'Reviravolta',
 }
 
 const sortByTypeAndTitle = (a: Node<StoryBlockData>, b: Node<StoryBlockData>) => {
@@ -90,9 +90,9 @@ export const compilePrompt = (
   )
 
   const promptLines = [
-    `Block: ${TYPE_LABELS[target.data.type]} - ${target.data.title}`,
-    'Context:',
-    ...(contextLines.length > 0 ? contextLines : ['- None']),
+    `Bloco: ${TYPE_LABELS[target.data.type]} - ${target.data.title}`,
+    'Contexto:',
+    ...(contextLines.length > 0 ? contextLines : ['- Nenhum']),
   ]
 
   return {

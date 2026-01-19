@@ -17,14 +17,17 @@ export const Canvas = () => {
   const onConnect = useCanvasStore((state) => state.onConnect)
   const removeNodes = useCanvasStore((state) => state.removeNodes)
   const setSelectedNodeId = useCanvasStore((state) => state.setSelectedNodeId)
+  const setSelectedNodeIds = useCanvasStore((state) => state.setSelectedNodeIds)
 
   const nodeTypes = useMemo(() => ({ story: StoryNode }), [])
 
   const handleSelectionChange = useCallback(
     (params: OnSelectionChangeParams) => {
-      setSelectedNodeId(params.nodes[0]?.id ?? null)
+      const selectedIds = params.nodes.map((node) => node.id)
+      setSelectedNodeIds(selectedIds)
+      setSelectedNodeId(selectedIds[0] ?? null)
     },
-    [setSelectedNodeId]
+    [setSelectedNodeId, setSelectedNodeIds]
   )
 
   return (
@@ -42,6 +45,8 @@ export const Canvas = () => {
           fitView
           fitViewOptions={{ padding: 0.3 }}
           deleteKeyCode={["Backspace", "Delete"]}
+          snapToGrid
+          snapGrid={[20, 20]}
           className="canvas-flow"
         >
           <Background gap={24} size={1} color="#cdd3da" />

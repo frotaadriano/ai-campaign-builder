@@ -73,7 +73,7 @@ def create_campaign(payload: CampaignCreate, db: Session = Depends(get_session))
 def get_campaign(campaign_id: str, db: Session = Depends(get_session)):
     campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     if not campaign:
-        raise HTTPException(status_code=404, detail='Campaign not found')
+        raise HTTPException(status_code=404, detail='Campanha nao encontrada')
     return _to_response(campaign)
 
 
@@ -83,7 +83,7 @@ def update_campaign(
 ):
     campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     if not campaign:
-        raise HTTPException(status_code=404, detail='Campaign not found')
+        raise HTTPException(status_code=404, detail='Campanha nao encontrada')
 
     campaign.title = payload.title
     campaign.data = json.dumps({'nodes': payload.nodes, 'edges': payload.edges})
@@ -98,7 +98,7 @@ def update_campaign(
 def delete_campaign(campaign_id: str, db: Session = Depends(get_session)):
     campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     if not campaign:
-        raise HTTPException(status_code=404, detail='Campaign not found')
+        raise HTTPException(status_code=404, detail='Campanha nao encontrada')
 
     db.delete(campaign)
     db.commit()

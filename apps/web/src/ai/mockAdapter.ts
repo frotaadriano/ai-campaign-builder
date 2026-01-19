@@ -3,9 +3,9 @@ import type { Edge, Node } from 'reactflow'
 import type { StoryBlockData } from '../models/types'
 import { compilePrompt } from './promptCompiler'
 
-const ADJECTIVES = ['tangled', 'ancient', 'haunting', 'forgotten', 'restless']
-const MOTIFS = ['oath', 'ruin', 'rumor', 'rite', 'shadow']
-const VERBS = ['pulls', 'guides', 'fractures', 'echoes', 'shifts']
+const ADJECTIVES = ['sombrio', 'antigo', 'inquieto', 'velado', 'misterioso']
+const MOTIFS = ['juramento', 'ruina', 'rumor', 'rito', 'sombra']
+const VERBS = ['puxa', 'guia', 'fratura', 'ecoa', 'muda']
 
 const hashString = (value: string) => {
   let hash = 0
@@ -39,12 +39,12 @@ export const generateMock = (
       const verb = pick(VERBS, seed, 5)
       const contextLine =
         context.contextTitles.length > 0
-          ? `Influenced by ${context.contextTitles.join(', ')}.`
-          : 'No upstream context yet.'
+          ? `Influenciado por ${context.contextTitles.join(', ')}.`
+          : 'Sem contexto conectado ainda.'
 
       return {
         id: context.target.id,
-        content: `${context.target.data.title} becomes a ${adjective} ${motif} that ${verb} the story. ${contextLine}`,
+        content: `${context.target.data.title} vira um ${motif} ${adjective} que ${verb} a historia. ${contextLine}`,
       }
     })
 }

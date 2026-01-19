@@ -6,11 +6,11 @@ from typing import List, Mapping, Optional
 TYPE_ORDER = ['theme', 'location', 'npc', 'event', 'twist']
 
 TYPE_LABELS = {
-    'theme': 'Theme',
-    'location': 'Location',
+    'theme': 'Tema',
+    'location': 'Local',
     'npc': 'NPC',
-    'event': 'Event',
-    'twist': 'Twist',
+    'event': 'Evento',
+    'twist': 'Reviravolta',
 }
 
 
@@ -120,13 +120,13 @@ def build_prompt(
     ]
 
     prompt_lines = [
-        f"Campaign: {campaign_title or 'Untitled Campaign'}",
-        f"Target: {TYPE_LABELS.get(target.type, target.type)} - {target.title}",
-        "Context:",
-        *(context_lines if context_lines else ["- None"]),
-        "Instructions:",
-        "Write 2-3 concise sentences for this story block.",
-        "Stay consistent with the context and keep the tone cinematic.",
+        f"Campanha: {campaign_title or 'Campanha sem titulo'}",
+        f"Alvo: {TYPE_LABELS.get(target.type, target.type)} - {target.title}",
+        "Contexto:",
+        *(context_lines if context_lines else ["- Nenhum"]),
+        "Instrucoes:",
+        "Escreva 2-3 frases curtas para este bloco.",
+        "Mantenha consistencia com o contexto e um tom cinematografico.",
     ]
 
     prompt = "\n".join(prompt_lines)
@@ -134,13 +134,13 @@ def build_prompt(
     while len(prompt) > config.max_prompt_chars and context_lines:
         context_lines.pop()
         prompt_lines = [
-            f"Campaign: {campaign_title or 'Untitled Campaign'}",
-            f"Target: {TYPE_LABELS.get(target.type, target.type)} - {target.title}",
-            "Context:",
-            *(context_lines if context_lines else ["- None"]),
-            "Instructions:",
-            "Write 2-3 concise sentences for this story block.",
-            "Stay consistent with the context and keep the tone cinematic.",
+            f"Campanha: {campaign_title or 'Campanha sem titulo'}",
+            f"Alvo: {TYPE_LABELS.get(target.type, target.type)} - {target.title}",
+            "Contexto:",
+            *(context_lines if context_lines else ["- Nenhum"]),
+            "Instrucoes:",
+            "Escreva 2-3 frases curtas para este bloco.",
+            "Mantenha consistencia com o contexto e um tom cinematografico.",
         ]
         prompt = "\n".join(prompt_lines)
 
