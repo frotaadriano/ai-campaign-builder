@@ -1,18 +1,59 @@
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
-from typing import List, Optional, Protocol
+from typing import List, Optional, Protocol, Tuple
 
 import httpx
 
 from app.services.prompt_builder import PromptItem
+
+_DND_TITLES = {
+    'theme': ['Sombras de Netheril', 'Culto do Dragao', 'Segredos de Waterdeep', 'Ecos de Vecna'],
+    'location': ['Neverwinter', 'Waterdeep', "Baldur's Gate", 'Silverymoon', 'Candlekeep'],
+    'npc': ['Volo Geddarm', 'Laeral Silverhand', 'Mirt, o Sr. Moeda', 'Elminster Aumar'],
+    'event': ['Festival de Midwinter', 'Ataque dos drows', 'Ritual da Lua Nova', 'Cerco de Luskan'],
+    'twist': [
+        'O aliado e um doppelganger',
+        'A reliquia e de Netheril',
+        'A ordem guarda um segredo',
+        'O vilao serve Asmodeus',
+    ],
+}
 
 
 @dataclass(frozen=True)
 class GeneratedItem:
     id: str
     content: str
+    title: Optional[str] = None
+
+
+def _parse_json_payload(value: str) -> Tuple[Optional[str], str]:
+    try:
+        data = json.loads(value)
+        title = data.get('title') if isinstance(data, dict) else None
+        content = data.get('content') if isinstance(data, dict) else None
+        if isinstance(content, str) and content.strip():
+            return (title.strip() if isinstance(title, str) else None, content.strip())
+    except json.JSONDecodeError:
+        pass
+
+    start = value.find('{')
+    end = value.rfind('}')
+    if start != -1 and end != -1 and end > start:
+        snippet = value[start : end + 1]
+        try:
+            data = json.loads(snippet)
+            title = data.get('title') if isinstance(data, dict) else None
+            content = data.get('content') if isinstance(data, dict) else None
+            if isinstance(content, str) and content.strip():
+                return (title.strip() if isinstance(title, str) else None, content.strip())
+        except json.JSONDecodeError:
+            pass
+
+    return (None, value.strip())
 
 
 class AIAdapter(Protocol):
@@ -54,6 +95,8 @@ class MockAdapter:
             adjective = self._pick(self._adjectives, seed, 1)
             motif = self._pick(self._motifs, seed, 3)
             verb = self._pick(self._verbs, seed, 5)
+            titles = _DND_TITLES.get(item.target_type, [])
+            title = self._pick(titles, seed, 7) if titles else item.target_title
             context_line = (
                 f"Influenciado por {', '.join(item.context_titles)}."
                 if item.context_titles
@@ -62,8 +105,9 @@ class MockAdapter:
             results.append(
                 GeneratedItem(
                     id=item.id,
+                    title=title,
                     content=(
-                        f"{item.target_title} vira um {motif} {adjective} que {verb} a historia. "
+                        f"{title} vira um {motif} {adjective} que {verb} a historia. "
                         f"{context_line}"
                     ),
                 )
@@ -102,8 +146,9 @@ class OpenAIAdapter:
                 response = await client.post('/v1/chat/completions', json=payload)
                 response.raise_for_status()
                 data = response.json()
-                content = data['choices'][0]['message']['content'].strip()
-                results.append(GeneratedItem(id=item.id, content=content))
+                raw = data['choices'][0]['message']['content'].strip()
+                title, content = _parse_json_payload(raw)
+                results.append(GeneratedItem(id=item.id, content=content, title=title))
 
         return results
 
@@ -149,8 +194,9 @@ class AzureOpenAIAdapter:
                 )
                 response.raise_for_status()
                 data = response.json()
-                content = data['choices'][0]['message']['content'].strip()
-                results.append(GeneratedItem(id=item.id, content=content))
+                raw = data['choices'][0]['message']['content'].strip()
+                title, content = _parse_json_payload(raw)
+                results.append(GeneratedItem(id=item.id, content=content, title=title))
 
         return results
 

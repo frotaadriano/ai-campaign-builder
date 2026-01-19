@@ -40,6 +40,7 @@ class PromptItem:
     id: str
     prompt: str
     target_title: str
+    target_type: str
     context_titles: List[str]
 
 
@@ -126,6 +127,10 @@ def build_prompt(
         *(context_lines if context_lines else ["- Nenhum"]),
         "Instrucoes:",
         "Escreva 2-3 frases curtas para este bloco.",
+        "Use nomes canonicos de DnD 5e (Forgotten Realms / Costa da Espada).",
+        "Prefira locais conhecidos como Waterdeep, Neverwinter, Baldur's Gate, Silverymoon.",
+        "Responda em JSON valido: {\"title\": \"...\", \"content\": \"...\"}.",
+        "O titulo deve usar nomes canonicos de DnD 5e.",
         "Mantenha consistencia com o contexto e um tom cinematografico.",
     ]
 
@@ -140,6 +145,10 @@ def build_prompt(
             *(context_lines if context_lines else ["- Nenhum"]),
             "Instrucoes:",
             "Escreva 2-3 frases curtas para este bloco.",
+            "Use nomes canonicos de DnD 5e (Forgotten Realms / Costa da Espada).",
+            "Prefira locais conhecidos como Waterdeep, Neverwinter, Baldur's Gate, Silverymoon.",
+            "Responda em JSON valido: {\"title\": \"...\", \"content\": \"...\"}.",
+            "O titulo deve usar nomes canonicos de DnD 5e.",
             "Mantenha consistencia com o contexto e um tom cinematografico.",
         ]
         prompt = "\n".join(prompt_lines)
@@ -151,6 +160,7 @@ def build_prompt(
         id=target.id,
         prompt=prompt,
         target_title=target.title,
+        target_type=target.type,
         context_titles=context_titles,
     )
 

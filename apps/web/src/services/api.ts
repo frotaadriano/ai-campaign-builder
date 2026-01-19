@@ -34,6 +34,7 @@ export type GenerationRequest = {
 
 export type GeneratedBlock = {
   id: string
+  title?: string
   content: string
 }
 

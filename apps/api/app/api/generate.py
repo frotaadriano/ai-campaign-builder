@@ -23,5 +23,7 @@ async def generate_blocks(payload: GenerationRequest):
     )
     return GenerationResponse(
         mode=mode,
-        items=[GeneratedBlock(id=item.id, content=item.content) for item in items],
+        items=[
+            GeneratedBlock(id=item.id, title=item.title, content=item.content) for item in items
+        ],
     )

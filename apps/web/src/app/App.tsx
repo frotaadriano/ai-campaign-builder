@@ -13,6 +13,7 @@ import {
   listCampaigns,
   updateCampaign,
   type Campaign,
+  type CampaignSummary,
 } from '../services/api'
 import { useCanvasStore } from '../state/store'
 
@@ -102,6 +103,10 @@ export const App = () => {
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [isStoryOpen, setIsStoryOpen] = useState(false)
+  const [isCampaignsOpen, setIsCampaignsOpen] = useState(false)
+  const [campaigns, setCampaigns] = useState<CampaignSummary[]>([])
+  const [campaignsStatus, setCampaignsStatus] = useState<'idle' | 'loading' | 'error'>('idle')
+  const [campaignsError, setCampaignsError] = useState<string | null>(null)
 
   const savingRef = useRef(false)
   const skipAutoSave = useRef(true)
@@ -131,6 +136,7 @@ export const App = () => {
       setError(null)
 
       const campaigns = await listCampaigns()
+      setCampaigns(campaigns)
       if (!isActive) {
         return
       }
@@ -173,6 +179,21 @@ export const App = () => {
       isActive = false
     }
   }, [hydrateCampaign, setHasHydrated])
+
+  const refreshCampaigns = useCallback(async () => {
+    setCampaignsStatus('loading')
+    setCampaignsError(null)
+    try {
+      const data = await listCampaigns()
+      setCampaigns(data)
+      setCampaignsStatus('idle')
+    } catch (listError) {
+      const message =
+        listError instanceof Error ? listError.message : 'Falha ao carregar campanhas.'
+      setCampaignsError(message)
+      setCampaignsStatus('error')
+    }
+  }, [])
 
   const saveCampaign = useCallback(
     async (snapshot: CampaignSnapshot, allowCreate: boolean) => {
@@ -262,6 +283,7 @@ export const App = () => {
       setHasHydrated(true)
       skipAutoSave.current = true
       setStatus('idle')
+      void refreshCampaigns()
     } catch (createError) {
       const message = createError instanceof Error ? createError.message : 'Falha ao criar.'
       setError(message)
@@ -292,6 +314,30 @@ export const App = () => {
 
   const handleSave = async () => {
     await saveCampaign(campaignSnapshot, true)
+    void refreshCampaigns()
+  }
+
+  const handleOpenCampaigns = () => {
+    setIsCampaignsOpen(true)
+    void refreshCampaigns()
+  }
+
+  const handleSelectCampaign = async (id: string) => {
+    setStatus('loading')
+    setError(null)
+    setIsCampaignsOpen(false)
+    try {
+      const loaded = await fetchCampaign(id)
+      hydrateCampaign(loaded)
+      setHasHydrated(true)
+      skipAutoSave.current = true
+      setStatus('idle')
+    } catch (loadError) {
+      const message =
+        loadError instanceof Error ? loadError.message : 'Falha ao carregar campanha.'
+      setError(message)
+      setStatus('error')
+    }
   }
 
   const handleRegenerate = () => {
@@ -379,7 +425,7 @@ export const App = () => {
         <div className="app-header__left">
           <div>
             <div className="app-title">AI Campaign Builder</div>
-            <div className="app-subtitle">Phase 4 - Integracao real de IA</div>
+            <div className="app-subtitle">Fase 4 - Integracao real de IA</div>
           </div>
           <div className="campaign-field">
             <label className="campaign-field__label" htmlFor="campaign-title">
@@ -417,6 +463,9 @@ export const App = () => {
           <button type="button" className="ghost-button" onClick={() => setIsStoryOpen(true)}>
             Historia
           </button>
+          <button type="button" className="ghost-button" onClick={handleOpenCampaigns}>
+            Campanhas
+          </button>
         </div>
       </header>
       {error ? <div className="app-alert">{error}</div> : null}
@@ -442,6 +491,65 @@ export const App = () => {
               </button>
             </div>
             <div className="story-modal__body">{storyText}</div>
+          </div>
+        </div>
+      ) : null}
+      {isCampaignsOpen ? (
+        <div className="story-modal">
+          <div className="story-modal__overlay" onClick={() => setIsCampaignsOpen(false)} />
+          <div className="story-modal__content">
+            <div className="story-modal__header">
+              <div className="story-modal__title">Campanhas salvas</div>
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={() => setIsCampaignsOpen(false)}
+              >
+                Fechar
+              </button>
+            </div>
+            <div className="story-modal__body">
+              <div className="campaigns-toolbar">
+                <button type="button" className="ghost-button" onClick={refreshCampaigns}>
+                  Atualizar lista
+                </button>
+                <span className="campaigns-status">
+                  {campaignsStatus === 'loading'
+                    ? 'Carregando...'
+                    : campaignsStatus === 'error'
+                    ? 'Falha ao carregar'
+                    : `${campaigns.length} campanhas`}
+                </span>
+              </div>
+              {campaignsError ? <div className="app-alert">{campaignsError}</div> : null}
+              {campaigns.length === 0 ? (
+                <div className="panel__empty">Nenhuma campanha salva ainda.</div>
+              ) : (
+                <div className="campaigns-list">
+                  {campaigns.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={`campaigns-card ${
+                        item.id === campaignId ? 'campaigns-card--active' : ''
+                      }`}
+                      onClick={() => handleSelectCampaign(item.id)}
+                    >
+                      <div className="campaigns-card__title">{item.title}</div>
+                      <div className="campaigns-card__meta">
+                        Atualizado em{' '}
+                        {new Date(item.updated_at).toLocaleString('pt-BR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       ) : null}

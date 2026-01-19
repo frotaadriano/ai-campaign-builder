@@ -147,7 +147,7 @@ type CanvasState = {
   setCampaignTitle: (title: string) => void
   setCampaignData: (nodes: Node<StoryBlockData>[], edges: Edge[]) => void
   setHasHydrated: (value: boolean) => void
-  applyGeneratedContent: (updates: Array<{ id: string; content: string }>) => void
+  applyGeneratedContent: (updates: Array<{ id: string; content: string; title?: string }>) => void
   onNodesChange: (changes: NodeChange[]) => void
   onEdgesChange: (changes: EdgeChange[]) => void
   onConnect: (connection: Connection) => void
@@ -258,20 +258,21 @@ export const useCanvasStore = create<CanvasState>()(
     },
     applyGeneratedContent: (updates) => {
       set((state) => {
-        const updateMap = new Map(updates.map((item) => [item.id, item.content]))
+        const updateMap = new Map(updates.map((item) => [item.id, item]))
         if (updateMap.size === 0) {
           return
         }
 
         state.nodes.forEach((node) => {
-          const content = updateMap.get(node.id)
-          if (content === undefined) {
+          const update = updateMap.get(node.id)
+          if (!update) {
             return
           }
 
           node.data = {
             ...node.data,
-            content,
+            content: update.content,
+            title: update.title ?? node.data.title,
           }
         })
 

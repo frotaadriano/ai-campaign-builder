@@ -15,6 +15,7 @@ class GenerationRequest(BaseModel):
 
 class GeneratedBlock(BaseModel):
     id: str
+    title: Optional[str] = None
     content: str
 
 
