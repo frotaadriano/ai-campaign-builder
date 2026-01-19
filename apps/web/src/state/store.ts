@@ -139,6 +139,7 @@ type CanvasState = {
   selectedNodeId: string | null
   selectedNodeIds: string[]
   addBlock: (type: BlockType) => void
+  addBlockWithTitle: (type: BlockType, title: string) => void
   updateBlock: (id: string, patch: Partial<StoryBlockData>) => void
   removeNodes: (nodeIds: string[]) => void
   setSelectedNodeId: (nodeId: string | null) => void
@@ -176,6 +177,27 @@ export const useCanvasStore = create<CanvasState>()(
           data: {
             type,
             title: getDefaultTitle(type),
+          },
+        })
+        state.selectedNodeId = id
+        state.selectedNodeIds = [id]
+        markDirtyFromState(state, [id])
+      })
+    },
+    addBlockWithTitle: (type, title) => {
+      set((state) => {
+        const index = state.nodes.length
+        const position = getNextPosition(index)
+        const id = crypto.randomUUID()
+        const safeTitle = title.trim() || getDefaultTitle(type)
+
+        state.nodes.push({
+          id,
+          type: 'story',
+          position,
+          data: {
+            type,
+            title: safeTitle,
           },
         })
         state.selectedNodeId = id

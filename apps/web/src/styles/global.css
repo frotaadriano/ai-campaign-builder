@@ -339,6 +339,9 @@ body {
   background: #f8fafb;
   cursor: pointer;
   transition: transform 0.12s ease, box-shadow 0.12s ease, border 0.12s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .palette-card:hover {
@@ -356,6 +359,45 @@ body {
 .palette-card__description {
   font-size: 12px;
   color: var(--muted);
+}
+
+.palette-card__actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.link-button {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: 12px;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.link-button:hover {
+  text-decoration: underline;
+}
+
+.palette-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.suggestion-chip {
+  border: 1px solid var(--panel-border);
+  background: #ffffff;
+  padding: 6px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.suggestion-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .canvas-wrap {
