@@ -123,6 +123,7 @@ def build_prompt(
     prompt_lines = [
         f"Campanha: {campaign_title or 'Campanha sem titulo'}",
         f"Alvo: {TYPE_LABELS.get(target.type, target.type)} - {target.title}",
+        f"Tipo do bloco: {TYPE_LABELS.get(target.type, target.type)}",
         "Contexto:",
         *(context_lines if context_lines else ["- Nenhum"]),
         "Instrucoes:",
@@ -130,7 +131,9 @@ def build_prompt(
         "Use nomes canonicos de DnD 5e (Forgotten Realms / Costa da Espada).",
         "Prefira locais conhecidos como Waterdeep, Neverwinter, Baldur's Gate, Silverymoon.",
         "Responda em JSON valido: {\"title\": \"...\", \"content\": \"...\"}.",
-        "O titulo deve usar nomes canonicos de DnD 5e.",
+        "O titulo deve ser adequado ao tipo do bloco (NPC, local, evento, etc).",
+        "Nao repita titulos do contexto ou do tema.",
+        "O titulo deve usar nomes canonicos de DnD 5e quando aplicavel.",
         "Mantenha consistencia com o contexto e um tom cinematografico.",
     ]
 
@@ -141,6 +144,7 @@ def build_prompt(
         prompt_lines = [
             f"Campanha: {campaign_title or 'Campanha sem titulo'}",
             f"Alvo: {TYPE_LABELS.get(target.type, target.type)} - {target.title}",
+            f"Tipo do bloco: {TYPE_LABELS.get(target.type, target.type)}",
             "Contexto:",
             *(context_lines if context_lines else ["- Nenhum"]),
             "Instrucoes:",
@@ -148,7 +152,9 @@ def build_prompt(
             "Use nomes canonicos de DnD 5e (Forgotten Realms / Costa da Espada).",
             "Prefira locais conhecidos como Waterdeep, Neverwinter, Baldur's Gate, Silverymoon.",
             "Responda em JSON valido: {\"title\": \"...\", \"content\": \"...\"}.",
-            "O titulo deve usar nomes canonicos de DnD 5e.",
+            "O titulo deve ser adequado ao tipo do bloco (NPC, local, evento, etc).",
+            "Nao repita titulos do contexto ou do tema.",
+            "O titulo deve usar nomes canonicos de DnD 5e quando aplicavel.",
             "Mantenha consistencia com o contexto e um tom cinematografico.",
         ]
         prompt = "\n".join(prompt_lines)

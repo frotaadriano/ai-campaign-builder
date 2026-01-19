@@ -23,6 +23,46 @@ _DND_TITLES = {
 }
 
 
+def _hash_text(value: str) -> int:
+    hash_value = 0
+    for char in value:
+        hash_value = (hash_value << 5) - hash_value + ord(char)
+        hash_value &= 0xFFFFFFFF
+    return abs(hash_value)
+
+
+def _pick_title(options: List[str], seed: int, blocked: set[str]) -> Optional[str]:
+    if not options:
+        return None
+    for offset in range(len(options)):
+        candidate = options[(seed + offset) % len(options)]
+        if candidate.lower() not in blocked:
+            return candidate
+    return options[seed % len(options)]
+
+
+def _normalize_title(candidate: Optional[str], item: PromptItem, seed: int) -> str:
+    blocked = {title.lower() for title in item.context_titles}
+    if item.target_title:
+        blocked.add(item.target_title.lower())
+
+    other_titles = {
+        title.lower()
+        for block_type, titles in _DND_TITLES.items()
+        if block_type != item.target_type
+        for title in titles
+    }
+
+    if candidate and candidate.strip():
+        normalized = candidate.strip()
+        if normalized.lower() not in blocked and normalized.lower() not in other_titles:
+            return normalized
+
+    options = _DND_TITLES.get(item.target_type, [])
+    fallback = _pick_title(options, seed, blocked)
+    return fallback or (candidate.strip() if candidate else item.target_title)
+
+
 @dataclass(frozen=True)
 class GeneratedItem:
     id: str
@@ -76,14 +116,6 @@ class MockAdapter:
     _motifs = ['juramento', 'ruina', 'rumor', 'rito', 'sombra']
     _verbs = ['puxa', 'guia', 'fratura', 'ecoa', 'muda']
 
-    @staticmethod
-    def _hash(value: str) -> int:
-        hash_value = 0
-        for char in value:
-            hash_value = (hash_value << 5) - hash_value + ord(char)
-            hash_value &= 0xFFFFFFFF
-        return abs(hash_value)
-
     @classmethod
     def _pick(cls, items: List[str], seed: int, offset: int) -> str:
         return items[(seed + offset) % len(items)]
@@ -91,12 +123,11 @@ class MockAdapter:
     async def generate(self, prompts: List[PromptItem]) -> List[GeneratedItem]:
         results: List[GeneratedItem] = []
         for item in prompts:
-            seed = self._hash(item.prompt)
+            seed = _hash_text(item.prompt)
             adjective = self._pick(self._adjectives, seed, 1)
             motif = self._pick(self._motifs, seed, 3)
             verb = self._pick(self._verbs, seed, 5)
-            titles = _DND_TITLES.get(item.target_type, [])
-            title = self._pick(titles, seed, 7) if titles else item.target_title
+            title = _normalize_title(None, item, seed)
             context_line = (
                 f"Influenciado por {', '.join(item.context_titles)}."
                 if item.context_titles
@@ -148,7 +179,9 @@ class OpenAIAdapter:
                 data = response.json()
                 raw = data['choices'][0]['message']['content'].strip()
                 title, content = _parse_json_payload(raw)
-                results.append(GeneratedItem(id=item.id, content=content, title=title))
+                seed = _hash_text(item.prompt)
+                normalized_title = _normalize_title(title, item, seed)
+                results.append(GeneratedItem(id=item.id, content=content, title=normalized_title))
 
         return results
 
@@ -196,7 +229,9 @@ class AzureOpenAIAdapter:
                 data = response.json()
                 raw = data['choices'][0]['message']['content'].strip()
                 title, content = _parse_json_payload(raw)
-                results.append(GeneratedItem(id=item.id, content=content, title=title))
+                seed = _hash_text(item.prompt)
+                normalized_title = _normalize_title(title, item, seed)
+                results.append(GeneratedItem(id=item.id, content=content, title=normalized_title))
 
         return results
 

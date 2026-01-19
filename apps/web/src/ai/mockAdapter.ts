@@ -41,6 +41,19 @@ const DND_TITLES: Record<BlockType, string[]> = {
   ],
 }
 
+const pickTitle = (options: string[], seed: number, blocked: Set<string>) => {
+  if (options.length === 0) {
+    return null
+  }
+  for (let offset = 0; offset < options.length; offset += 1) {
+    const candidate = options[(seed + offset) % options.length]
+    if (!blocked.has(candidate.toLowerCase())) {
+      return candidate
+    }
+  }
+  return options[seed % options.length]
+}
+
 const hashString = (value: string) => {
   let hash = 0
   for (let i = 0; i < value.length; i += 1) {
@@ -73,7 +86,13 @@ export const generateMock = (
       const motif = pick(MOTIFS, seed, 3)
       const verb = pick(VERBS, seed, 5)
       const titles = DND_TITLES[context.target.data.type]
-      const title = titles ? pick(titles, seed, 7) : context.target.data.title
+      const blocked = new Set(
+        [context.target.data.title, ...context.contextTitles].map((item) => item.toLowerCase())
+      )
+      const title =
+        titles && titles.length > 0
+          ? pickTitle(titles, seed + 7, blocked) ?? context.target.data.title
+          : context.target.data.title
       const contextLine =
         context.contextTitles.length > 0
           ? `Influenciado por ${context.contextTitles.join(', ')}.`
